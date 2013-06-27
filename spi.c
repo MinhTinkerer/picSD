@@ -59,3 +59,11 @@ void spi_receive(unsigned char* data, unsigned int length){
 	data++;
     }
 }
+
+unsigned char spi_single_receive(void){
+    SSP1BUF = 0xFF;
+    while( !PIR1bits.SSP1IF ); // wait for transmission complete
+    while( !SSP1STATbits.BF ); // wait for buffer full
+    PIR1bits.SSP1IF = 0; // clear SSP1IF
+    return SSP1BUF;
+}
