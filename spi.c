@@ -60,6 +60,14 @@ void spi_receive(unsigned char* data, unsigned int length){
     }
 }
 
+void spi_single_send(unsigned char data){
+    unsigned char tmp;
+    SSP1BUF = data;
+    while( !PIR1bits.SSP1IF ); // wait for buffer full
+    PIR1bits.SSP1IF = 0; // clear SSP1IF
+    tmp = SSP1BUF;
+}
+
 unsigned char spi_single_receive(void){
     SSP1BUF = 0xFF;
     while( !PIR1bits.SSP1IF ); // wait for transmission complete

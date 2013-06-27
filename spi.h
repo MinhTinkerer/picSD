@@ -19,6 +19,7 @@ void spi_init(unsigned char speed_mode);
 void spi_send_byte(unsigned char data);
 void spi_send(unsigned char* data, unsigned int length);
 void spi_receive(unsigned char* data, unsigned int length);
+void spi_single_send(unsigned char data);
 unsigned char spi_single_receive(void);
 
 #endif	/* SPI_H */
