@@ -4,13 +4,17 @@
 #include "uart.h"
 
 // 512 byte read buffer
-unsigned char SDRdata[512];
+//unsigned char SDRdata[512];
 // 512 byte write buffer
-unsigned char SDWdata[512];
+//unsigned char SDWdata[512];
+// 512 byte block buffer
+unsigned char SDdata[512];
 // SD command buffer
 unsigned char SDcommand[6];
 // no response flag
 unsigned char no_response = 0;
+// holds SD card response byte
+unsigned char card_response = 0;
 // timeout variable to determine card timeout
 unsigned int timeout = SD_TIMEOUT;
 
@@ -24,9 +28,9 @@ void SDcard_init(void){
     // send 80 clocks (10 bytes) to wake up SD card
     // load dummy values into buffer
     for(unsigned char i = 0; i < 10; i++){
-	SDWdata[i] = 0xFF;
+	SDdata[i] = 0xFF;
     }
-    spi_send(SDWdata, 10);
+    spi_send(SDdata, 10);
 
     // set CS low
     CS_low;
@@ -60,9 +64,9 @@ void SDcard_init(void){
             spi_send(SDcommand, 6);
             // read back response
             // response time is 0 to 8 bytes
-            spi_receive(SDRdata, 8);
+            spi_receive(SDdata, 8);
             for(unsigned char b = 0; b < 7; b++){
-                    if(SDRdata[b] == 0x00) no_response = 0;
+                    if(SDdata[b] == 0x00) no_response = 0;
             }
     }
     uart_puts("success!\n");
@@ -95,12 +99,11 @@ void SDcard_read_block(unsigned long address){
     // wait for data token FEh
     SDcard_get_response(0xFE);
     // receive data block
-    spi_receive(SDRdata, 512);
+    spi_receive(SDdata, 512);
     // flush two bytes of CRC data
-    SDWdata[0] = 0xFF;
-    SDWdata[1] = 0xFF;
-    SDWdata[2] = 0xFF;
-    spi_send(SDWdata, 3);
+    spi_single_send(0xFF);
+    spi_single_send(0xFF);
+    spi_single_send(0xFF);
 
     // set SD card CS high
     CS_high;
@@ -127,24 +130,24 @@ void SDcard_write_block(unsigned long address){
     uart_puts("success!\n");
 
     // send a one byte gap
-    spi_send_byte(0xFF);
+    spi_single_send(0xFF);
     
     uart_puts("Sending data block...");
     // begin block write
     // send data token 0xFE
-    spi_send_byte(0xFE);
+    spi_single_send(0xFE);
     // write data block
-    spi_send(SDWdata, 512);
+    spi_send(SDdata, 512);
     // send two byte CRC data
-    spi_send_byte(0xFF);
-    spi_send_byte(0xFF);
+    spi_single_send(0xFF);
+    spi_single_send(0xFF);
 
     // read data response
-    spi_receive(SDRdata, 1);
+    card_response = spi_single_receive();
 
-    if( (SDRdata[0] & 0x0F) == 0x0D ) uart_puts("write error occured!\n");
-    if( (SDRdata[0] & 0x0F) == 0x0B ) uart_puts("CRC error occured!\n");
-    if( (SDRdata[0] & 0x0F) == 0x05 ){
+    if( (card_response & 0x0F) == 0x0D ) uart_puts("write error occured!\n");
+    if( (card_response & 0x0F) == 0x0B ) uart_puts("CRC error occured!\n");
+    if( (card_response & 0x0F) == 0x05 ){
         uart_puts("success!\n");
         uart_puts("Wating for card to finish write process...");
         // wait for card to be ready
