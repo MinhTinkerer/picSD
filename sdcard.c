@@ -161,8 +161,7 @@ unsigned char SDcard_get_response(unsigned char response){
     // response time is 0 to 8 bytes
     no_response = 1;
     while(no_response && timeout){
-        spi_receive(SDRdata, 1); // read one byte
-        if(SDRdata[0] == response) no_response = 0; // check if response matches
+        if(spi_single_receive() == response) no_response = 0; // check if response matches
         timeout--;
     }
     if(timeout == 0){ // if loop has timed out
