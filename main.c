@@ -27,7 +27,7 @@ int main(void){
     spi_init(2);
     SDcard_init();
     spi_init(0);
-
+    
     mount_disk();
     file_create("ZETALOGS.TXT");
     

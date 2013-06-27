@@ -51,10 +51,10 @@ void mount_disk(void){
     // read parition 1 LBA from MBR
     // LBA 4 bytes at address 0x01be offset 0x08
     // Little Endian
-    part1_addr = (unsigned long)SDRdata[0x01C6];
-    part1_addr |= ((unsigned long)SDRdata[0x01C7]<<8);
-    part1_addr |= ((unsigned long)SDRdata[0x01C8]<<16);
-    part1_addr |= ((unsigned long)SDRdata[0x01C9]<<24);
+    part1_addr = (unsigned long)SDdata[0x01C6];
+    part1_addr |= ((unsigned long)SDdata[0x01C7]<<8);
+    part1_addr |= ((unsigned long)SDdata[0x01C8]<<16);
+    part1_addr |= ((unsigned long)SDdata[0x01C9]<<24);
     // multiply LBA by sector size to
     // get address of first sector of first partition
     part1_addr *= 0x00000200;
@@ -64,21 +64,21 @@ void mount_disk(void){
     SDcard_read_block(part1_addr);
     
     // read out sector size in bytes
-    sector_size = SDRdata[0x000B];
-    sector_size |= SDRdata[0x000C]<<8;
+    sector_size = SDdata[0x000B];
+    sector_size |= SDdata[0x000C]<<8;
     // read out sectors per cluster
-    sectors_cluster = SDRdata[0x000D];
+    sectors_cluster = SDdata[0x000D];
     // read out number of reserved sectors
-    sectors_reserved = SDRdata[0x000E];
-    sectors_reserved |= SDRdata[0x000F]<<8;
+    sectors_reserved = SDdata[0x000E];
+    sectors_reserved |= SDdata[0x000F]<<8;
     // read out number of FATs
-    FAT_copies = SDRdata[0x0010];
+    FAT_copies = SDdata[0x0010];
     // read out number of maximum root entries possible
-    root_entries = SDRdata[0x0011];
-    root_entries |= SDRdata[0x0012]<<8;
+    root_entries = SDdata[0x0011];
+    root_entries |= SDdata[0x0012]<<8;
     // read out single FAT size in sectors
-    sectors_FAT = SDRdata[0x0016];
-    sectors_FAT |= SDRdata[0x0017]<<8;
+    sectors_FAT = SDdata[0x0016];
+    sectors_FAT |= SDdata[0x0017]<<8;
     
     // calculate addresses of both FAT copies
     FAT_address[0] = part1_addr + (sectors_reserved * sector_size);
@@ -98,17 +98,19 @@ void file_create(const unsigned char* filename){
     // find first unallocated cluster
     uart_puts("Searching first unallocated cluster...");
     for(cluster_number = 0; cluster_number < 0xFFFF; cluster_number++){
-        if( (SDRdata[cluster_number*2] == 0) && (SDRdata[(cluster_number*2)+1] == 0) ) break;
+        if( (SDdata[cluster_number*2] == 0) && (SDdata[(cluster_number*2)+1] == 0) ) break;
     }
     uart_puts("done!\n");
 
     // allocate cluster in FAT
     // copy read sector
+    /*
     for(unsigned int i = 0; i < 512; i++){
         SDWdata[i] = SDRdata[i];
     }
-    SDWdata[cluster_number*2] = 0xFF;
-    SDWdata[(cluster_number*2)+1] = 0xFF;
+    */
+    SDdata[cluster_number*2] = 0xFF;
+    SDdata[(cluster_number*2)+1] = 0xFF;
     // write new FAT to both fat copies
     SDcard_write_block(FAT_address[0]);
     SDcard_write_block(FAT_address[1]);
@@ -132,7 +134,7 @@ void file_create(const unsigned char* filename){
     // search first unallocated entry
     uart_puts("Searching first unallocated root table entry...");
     for(entry_addr = 0; entry_addr < 0x0200; entry_addr += 32){
-        if( (SDRdata[entry_addr] == 0xE5) || (SDRdata[entry_addr] == 0x00) ) break;
+        if( (SDdata[entry_addr] == 0xE5) || (SDdata[entry_addr] == 0x00) ) break;
     }
     uart_puts("done!\n");
 
@@ -142,15 +144,15 @@ void file_create(const unsigned char* filename){
     uart_putc('\n');
 
     // copy read table block to SDWdata
-    for(unsigned int i = 0; i < 512; i++){
+    /*for(unsigned int i = 0; i < 512; i++){
         SDWdata[i] = SDRdata[i];
-    }
+    }*/
 
     // create file with filename
     unsigned char offset = 0;
     while(*filename){
         if(*filename != '.'){ // use '.' in filename as delimiter
-            SDWdata[entry_addr+offset] = *filename;
+            SDdata[entry_addr+offset] = *filename;
             filename++;
             offset++;
         }
@@ -161,49 +163,49 @@ void file_create(const unsigned char* filename){
 
     // add attribute byte
     // archive flag set
-    SDWdata[entry_addr+0x0B] = 0x20;
+    SDdata[entry_addr+0x0B] = 0x20;
 
     // set reserved byte to 0
-    SDWdata[entry_addr+0x0C] = 0x00;
+    SDdata[entry_addr+0x0C] = 0x00;
 
     // set millisecond stamp
-    SDWdata[entry_addr+0x0D] = 0x00;
+    SDdata[entry_addr+0x0D] = 0x00;
 
     // set creation time
     // time 12:00:00
-    SDWdata[entry_addr+0x0E] = 0x00;
-    SDWdata[entry_addr+0x0F] = 0x60;
+    SDdata[entry_addr+0x0E] = 0x00;
+    SDdata[entry_addr+0x0F] = 0x60;
 
     // set creation data
     // date January 1, 2000
-    SDWdata[entry_addr+0x10] = 0x21;
-    SDWdata[entry_addr+0x11] = 0x24;
+    SDdata[entry_addr+0x10] = 0x21;
+    SDdata[entry_addr+0x11] = 0x24;
 
     // set last access date
-    SDWdata[entry_addr+0x12] = 0x21;
-    SDWdata[entry_addr+0x13] = 0x24;
+    SDdata[entry_addr+0x12] = 0x21;
+    SDdata[entry_addr+0x13] = 0x24;
 
     // reserved for FAT32
-    SDWdata[entry_addr+0x14] = 0x00;
-    SDWdata[entry_addr+0x15] = 0x00;
+    SDdata[entry_addr+0x14] = 0x00;
+    SDdata[entry_addr+0x15] = 0x00;
 
     // last write time
-    SDWdata[entry_addr+0x16] = 0x00;
-    SDWdata[entry_addr+0x17] = 0x60;
+    SDdata[entry_addr+0x16] = 0x00;
+    SDdata[entry_addr+0x17] = 0x60;
 
     // last write date
-    SDWdata[entry_addr+0x18] = 0x21;
-    SDWdata[entry_addr+0x19] = 0x24;
+    SDdata[entry_addr+0x18] = 0x21;
+    SDdata[entry_addr+0x19] = 0x24;
 
     // enter file starting cluster
-    SDWdata[entry_addr+0x1A] = cluster_number & 0xFF;
-    SDWdata[entry_addr+0x1B] = (cluster_number>>8) & 0xFF;
+    SDdata[entry_addr+0x1A] = cluster_number & 0xFF;
+    SDdata[entry_addr+0x1B] = (cluster_number>>8) & 0xFF;
 
     // set initial file size to 0 bytes
-    SDWdata[entry_addr+0x1C] = 0x00;
-    SDWdata[entry_addr+0x1D] = 0x00;
-    SDWdata[entry_addr+0x1E] = 0x00;
-    SDWdata[entry_addr+0x1F] = 0x00;
+    SDdata[entry_addr+0x1C] = 0x00;
+    SDdata[entry_addr+0x1D] = 0x00;
+    SDdata[entry_addr+0x1E] = 0x00;
+    SDdata[entry_addr+0x1F] = 0x00;
 
     // write data block
     SDcard_write_block(rootdir_start);
@@ -220,9 +222,10 @@ void sector_open(void){
     uart_putc('\n');
 
     // copy read sector to SDWdata
+    /*
     for(unsigned int i = 0; i < 512; i++){
         SDWdata[i] = SDRdata[i];
-    }
+    }*/
 }
 
 void sector_close(void){
@@ -235,7 +238,7 @@ void file_append(const unsigned char* string){
     // (byte number)
     while(*string){
         if(byte_number < 512){
-            SDWdata[byte_number] = *string;
+            SDdata[byte_number] = *string;
             string++;
             byte_number++;
             // increase file length
@@ -257,9 +260,9 @@ void file_update_size(void){
     // read first sector of root directory table
     SDcard_read_block(rootdir_start);
     // copy read sector to SDWdata
-    for(unsigned int i = 0; i < 512; i++){
+    /*for(unsigned int i = 0; i < 512; i++){
         SDWdata[i] = SDRdata[i];
-    }
+    }*/
 
     ltoa(address_buffer, file_length, 16);
     uart_puts("File size: ");
@@ -267,10 +270,10 @@ void file_update_size(void){
     uart_putc('\n');
 
     // set file size
-    SDWdata[entry_addr+0x1C] = file_length & 0xFF;
-    SDWdata[entry_addr+0x1D] = (file_length>>8) & 0xFF;
-    SDWdata[entry_addr+0x1E] = (file_length>>16) & 0xFF;
-    SDWdata[entry_addr+0x1F] = (file_length>>24) & 0xFF;
+    SDdata[entry_addr+0x1C] = file_length & 0xFF;
+    SDdata[entry_addr+0x1D] = (file_length>>8) & 0xFF;
+    SDdata[entry_addr+0x1E] = (file_length>>16) & 0xFF;
+    SDdata[entry_addr+0x1F] = (file_length>>24) & 0xFF;
     // write first sector of root directory table
     SDcard_write_block(rootdir_start);
 }
