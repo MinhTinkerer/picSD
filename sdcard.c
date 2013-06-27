@@ -18,8 +18,8 @@ void SDcard_init(void){
     // send debug message
     uart_puts("Starting SD card initialization...\n");
     // configure CS pin
-    TRISCbits.TRISC1 = 0; // configure CS as output
-    LATCbits.LATC1 = 1; // set CS high
+    CSTRIS &= ~CS; // configure CS as output
+    CS_high; // set CS high
 
     // send 80 clocks (10 bytes) to wake up SD card
     // load dummy values into buffer
@@ -29,7 +29,7 @@ void SDcard_init(void){
     spi_send(SDWdata, 10);
 
     // set CS low
-    LATCbits.LATC1 = 0;
+    CS_low;
 
     uart_puts("Sending CMD0, awaiting response...");
     // transmit command 0
@@ -67,14 +67,14 @@ void SDcard_init(void){
     }
     uart_puts("success!\n");
     // set SD card CS high
-    LATCbits.LATC1 = 1;
+    CS_high;
     uart_puts("SD card initialized successfully!\n");
 }
 
 void SDcard_read_block(unsigned long address){
     uart_puts("Sending CMD17...");
     // set CS low
-    LATCbits.LATC1 = 0;
+    CS_low;
     // load CMD17 with proper
     // block address
     SDcommand[0] = 0x51; // 0x40 | 0x11 (17)
@@ -103,13 +103,13 @@ void SDcard_read_block(unsigned long address){
     spi_send(SDWdata, 3);
 
     // set SD card CS high
-    LATCbits.LATC1 = 1;
+    CS_high;
 }
 
 void SDcard_write_block(unsigned long address){
     uart_puts("Sending CMD24...");
     // set CS low
-    LATCbits.LATC1 = 0;
+    CS_low;
     // load CMD24 with proper
     // block address
     SDcommand[0] = 0x58; // 0x40 | 0x18 (24)
@@ -153,7 +153,7 @@ void SDcard_write_block(unsigned long address){
     }
     
     // set SD card CS high
-    LATCbits.LATC1 = 1;
+    CS_high;
 }
 
 unsigned char SDcard_get_response(unsigned char response){
